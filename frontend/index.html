@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SolidityPet Frontend</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+        #petStatus {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            margin: 10px 5px;
+            padding: 5px 10px;
+        }
+        #petAnimation {
+            width: 100px;
+            height: 100px;
+            margin: 20px auto;
+            background: url('pet.png') 0 0 no-repeat;
+            background-size: 300px 100px;
+            animation: play 10s steps(30) infinite;
+        }
+        @keyframes play {
+            100% { background-position: -300px 0; }
+        }
+        .pet-happy { filter: hue-rotate(0deg); }
+        .pet-neutral { filter: hue-rotate(30deg); }
+        .pet-sad { filter: hue-rotate(180deg); }
+    </style>
+</head>
+<body>
+    <h1>SolidityPet Game</h1>
+    <div id="connectWallet">
+        <button onclick="connectWallet()">Connect Wallet</button>
+    </div>
+    <div id="petActions" style="display:none;">
+        <input type="text" id="petName" placeholder="Enter pet name">
+        <button onclick="createPet()">Create Pet</button>
+        <button onclick="feedPet()">Feed Pet</button>
+        <button onclick="playWithPet()">Play with Pet</button>
+        <button onclick="getPetStatus()">Get Pet Status</button>
+    </div>
+    <div id="petAnimation" class="pet-neutral"></div>
+    <div id="petStatus"></div>
+
+    <script src="https://cdn.ethers.io/lib/ethers-5.0.umd.min.js"></script>
+    <script>
+        let provider;
+        let signer;
+        let contract;
+        const contractAddress = '0x22063bC54243d5cc0B66269C0d15449C95e8eA6c';
+        const contractABI = [{"inputs":[{"internalType":"string","name":"_name","type":"string"}],"name":"createPet","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"feedPet","outputs":[],"stateMutability":"nonpayable","type":"function"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"address","name":"owner","type":"address"},{"indexed":false,"internalType":"string","name":"name","type":"string"}],"name":"PetCreated","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"address","name":"owner","type":"address"},{"indexed":false,"internalType":"uint256","name":"newHunger","type":"uint256"}],"name":"PetFed","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"address","name":"owner","type":"address"},{"indexed":false,"internalType":"uint256","name":"newHappiness","type":"uint256"}],"name":"PetPlayed","type":"event"},{"inputs":[],"name":"playWithPet","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_owner","type":"address"}],"name":"getPetStatus","outputs":[{"internalType":"string","name":"name","type":"string"},{"internalType":"uint256","name":"hunger","type":"uint256"},{"internalType":"uint256","name":"happiness","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"HUNGER_RATE","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"JEALOUS_RATE","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MAX_HAPPINESS","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MAX_HUNGER","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MAX_PETS","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"petOwners","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"pets","outputs":[{"internalType":"string","name":"name","type":"string"},{"internalType":"uint256","name":"hunger","type":"uint256"},{"internalType":"uint256","name":"happiness","type":"uint256"},{"internalType":"uint256","name":"lastInteraction","type":"uint256"},{"internalType":"uint256","name":"lastHungerUpdate","type":"uint256"}],"stateMutability":"view","type":"function"}];        
+
+        async function connectWallet() {
+            if (typeof window.ethereum !== 'undefined') {
+                try {
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    provider = new ethers.providers.Web3Provider(window.ethereum);
+                    signer = provider.getSigner();
+                    contract = new ethers.Contract(contractAddress, contractABI, signer);
+                    document.getElementById('connectWallet').style.display = 'none';
+                    document.getElementById('petActions').style.display = 'block';
+                    getPetStatus();
+                } catch (error) {
+                    console.error("User denied account access");
+                }
+            } else {
+                console.log('Please install MetaMask!');
+            }
+        }
+
+        async function createPet() {
+            const name = document.getElementById('petName').value;
+            try {
+                const tx = await contract.createPet(name);
+                await tx.wait();
+                alert('Pet created successfully!');
+                getPetStatus();
+            } catch (error) {
+                console.error("Error creating pet:", error);
+                alert('Failed to create pet. See console for details.');
+            }
+        }
+
+        async function feedPet() {
+            try {
+                const tx = await contract.feedPet();
+                await tx.wait();
+                alert('Pet fed successfully!');
+                getPetStatus();
+            } catch (error) {
+                console.error("Error feeding pet:", error);
+                alert('Failed to feed pet. See console for details.');
+            }
+        }
+
+        async function playWithPet() {
+            try {
+                const tx = await contract.playWithPet();
+                await tx.wait();
+                alert('Played with pet successfully!');
+                getPetStatus();
+            } catch (error) {
+                console.error("Error playing with pet:", error);
+                alert('Failed to play with pet. See console for details.');
+            }
+        }
+
+        async function getPetStatus() {
+            try {
+                const address = await signer.getAddress();
+                const status = await contract.getPetStatus(address);
+                document.getElementById('petStatus').innerHTML = `
+                    <h3>Pet Status</h3>
+                    <p>Name: ${status.name}</p>
+                    <p>Hunger: ${status.hunger}</p>
+                    <p>Happiness: ${status.happiness}</p>
+                `;
+                updatePetAnimation(status.hunger, status.happiness);
+            } catch (error) {
+                console.error("Error getting pet status:", error);
+                document.getElementById('petStatus').innerHTML = '<p>No pet found. Create one to get started!</p>';
+                document.getElementById('petAnimation').className = 'pet-neutral';
+            }
+        }
+
+        function updatePetAnimation(hunger, happiness) {
+            const petAnimation = document.getElementById('petAnimation');
+            const averageStatus = (100 - parseInt(hunger) + parseInt(happiness)) / 2;
+
+            if (averageStatus > 66) {
+                petAnimation.className = 'pet-happy';
+            } else if (averageStatus > 33) {
+                petAnimation.className = 'pet-neutral';
+            } else {
+                petAnimation.className = 'pet-sad';
+            }
+        }
+
+        // Update pet status every 60 seconds
+        setInterval(getPetStatus, 60000);
+    </script>
+</body>
+</html>
